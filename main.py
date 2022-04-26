@@ -5,6 +5,7 @@ from os.path import isfile, join
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QMainWindow, QApplication
+from qtpy import QtWidgets
 
 import out2cif
 from out2cif_gui6 import Ui_MainWindow
@@ -34,10 +35,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.LoadButton.clicked.connect(self.LoadButtonPressed)
         self.ClearButton.clicked.connect(self.ClearButtonPressed)
         self.RunButton.clicked.connect(self.RunButtonPressed)
+        self.pushButton_2.clicked.connect(self.ReferenceButtonPressed)
         self.pushButton.clicked.connect(self.PushButtonPressed)
         self.spinBox.valueChanged.connect(self.return_spg_number)
         self.radioButton.clicked.connect(self.check_radio_buttons)
         self.radioButton_2.clicked.connect(self.check_radio_buttons)
+        self.radioButton_3.clicked.connect(self.check_radio_buttons)
         self.listWidget.itemClicked.connect(self.itemActivated_event)
         #self.SaveButton.clicked.connect(self.SaveButtonPressed)
         QApplication.processEvents()
@@ -87,14 +90,44 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         print('LoadButtonPressed')
 
+    def ReferenceButtonPressed(self):
+        # This is executed when the button is pressed
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        self.refs, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "",
+                                                     "All Files (*);;Crystallographic information file (*.cif)", options=options)
+
+        if self.refs:
+            print('refs_obtained ', self.refs)
+        for i in self.refs:
+            # print(i)
+            z = i.split('/')[-1]
+            self.ref_from_filename = z.split('.')[0]
+            with open(f'{i}', 'r') as myfile:
+                for line in myfile:
+                    if '_space_group_name_Hall' in line:
+                        print(line.split('Hall')[1].strip()[1:-1])
+                        self.Hall_ref = line.split('Hall')[1].strip()
+                    if '_symmetry_Int_Tables_number' in line:
+                        print(line.split('ber')[1].strip())
+                        self.num = line.split('ber')[1].strip()
+            #self.refs_list.append(self.ref_from_filename, line.split('H-M')[1].strip()[1:-1], line.split('ber')[1].strip())
+
+            ui.textBrowser_4.append(z)
+
+
+        print('reference buttons is pressed')
+
     def ClearButtonPressed(self):
         # This is executed when the button is pressed
         self.files = None
         ui.textBrowser.clear()
         ui.textBrowser_2.clear()
         ui.textBrowser_3.clear()
+        ui.textBrowser_3.clear()
         ui.listWidget.clear()
         ui.spinBox.clear()
+        self.refs_list = None
         self.manual_spg_number = None
         self.manual_hall_name = None
         print('ClearButtonPressed')
@@ -110,6 +143,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.radioButton_2.isChecked():
             self.workflow_mode = 2
             print('Manual')
+        if self.radioButton_3.isChecked():
+            self.workflow_mode = 3
+            print('Reference')
 
     def return_spg_number(self):
         if self.workflow_mode == 2:
@@ -144,6 +180,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.manual_spg_number = self.space_group_number
             self.manual_hall_name = self.activated_hall
             print('Manual')
+        if self.workflow_mode == 3:
+            self.manual_spg_number = int(self.num)
+            self.manual_hall_name = self.Hall_ref
+            print('manual spg num', self.manual_spg_number)
+            print('manual hall name', self.manual_hall_name)
+            print('Reference')
         print('SetButtonPressed')
 
     def RunButtonPressed(self):

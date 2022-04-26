@@ -16,7 +16,11 @@ def update_progress(i, total, length=20, fg="#", bg=" ", decimals=0):
     sys.stderr.flush()
 
 
-def O2C(f, pathsave):
+def O2C(f, pathsave, manual_spg_number, manual_hall_name):
+    print('f is ', f)
+    print('path is ', pathsave)
+    print('hall is ', manual_hall_name)
+    print('num is ', manual_spg_number)
     with open(f, 'r+') as fre:
         data = mmap.mmap(fre.fileno(), 0)
         # mo = re.search(b'(CRYSTAL)\n(\d \d \d)\n(.*)', data)
@@ -32,7 +36,10 @@ def O2C(f, pathsave):
             spg_HM = key
             sg_name_Hall = value
 
-    sg_number = Hall2Number[sg_name_Hall]
+    if manual_spg_number == 'Auto':
+        sg_number = Hall2Number[sg_name_Hall]
+    else:
+        sg_number = manual_spg_number
 
     if sg_number in range(1, 3):
         cell_set = 'triclinic'
@@ -51,6 +58,9 @@ def O2C(f, pathsave):
 
     print(sg_number)
     print(cell_set)
+
+    if manual_hall_name != 'Auto':
+        sg_name_Hall = manual_hall_name
 
     sg_ops = SymOpsHall[sg_name_Hall]
 
@@ -87,16 +97,16 @@ def O2C(f, pathsave):
     for h in range(0, len(a_list)):
         fobj.write('{}'.format(a_list[h]))
     fobj.close()  # Closes file object
-
+    print('fog_open')
     fo = open(f"{pathsave}/fog.txt", 'r')  # Open input file in order to read it
     b_list = fo.readlines()  # Read files line by line and write it in list, where every line is presented as single element of the list
     fo.close()  # We need to close f because we do not need it any more (because we have digiyal copy of it) and now it just wastes our memory
-
+    print('index_cut')
     index_cut = b_list.index(' T = ATOM BELONGING TO THE ASYMMETRIC UNIT\n')
     b_list = b_list[:index_cut - 1]
     # print(b_list)
     # print(b_list[70:71])
-
+    print('coordinates')
     if any("COORDINATES IN THE CRYSTALLOGRAPHIC CELL" in s for s in b_list):
         index_prim_tab = b_list.index(' TRANSFORMATION MATRIX PRIMITIVE-CRYSTALLOGRAPHIC CELL\n')
         primitive_cell_params = b_list[6].split()
@@ -144,7 +154,7 @@ def O2C(f, pathsave):
         list_of_atoms = cell_tab
 
     true_atoms = []
-
+    print('true_atoms')
     ato = [i.split(" ") for i in list_of_atoms]
     atoms = [' '.join(i).split() for i in ato]
     # print(list_of_atoms)
@@ -204,7 +214,6 @@ def O2C(f, pathsave):
     fi.write(true_atom_table)
     fi.write('\n' + '#END')
     fi.close()
-
     os.remove("fog.txt")
 
 dir_path = os.getcwd() #os.path.dirname(os.path.realpath(__file__))
@@ -212,7 +221,7 @@ dir_path = os.getcwd() #os.path.dirname(os.path.realpath(__file__))
 onlyfiles = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
 
 
-def main(path_list, path2save):
+def main(path_list, path2save, manual_spg_number, manual_hall_name):
     files_toprocess = set()
     paths = path_list
     print(paths)
@@ -229,7 +238,7 @@ def main(path_list, path2save):
         file_counter+=1
         try:
             print(i)
-            O2C(i, path2save)
+            O2C(i, path2save, manual_spg_number, manual_hall_name)
             time.sleep(0.021)
             update_progress(file_counter, len(files_toprocess))
         except:
